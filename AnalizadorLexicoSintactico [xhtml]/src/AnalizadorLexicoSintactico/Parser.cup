@@ -1,0 +1,376 @@
+package AnalizadorLexicoSintactico;
+import java.util.*;
+import java.io.*;
+import java_cup.runtime.*;
+import javax.swing.JFileChooser;
+
+parser code
+{:
+    public Symbol getCur_token() {
+            return cur_token;
+        }
+     
+    public void syntax_error(Symbol s){
+        report_error("Error de sintaxis. Linea: " + (s.right + 1) +
+        " Columna: " + s.left/(s.right + 1) + ". Texto: \"" + s.value + "\"", null);
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws
+    java.lang.Exception {
+        report_fatal_error("", null);
+    }  
+:};
+
+
+/*------------------------------------------TERMINALES-----------------------------------------*/
+terminal String HEADING1,HEADING2,HEADING3,HEADING4,HEADING5,HEADING6,ENCRIPTION_TYPE,VALIGN,ALIGN,SEMI,SEMICOLON, COMA, LPAR, RPAR, LCBRACE, RCBRACE,DOCUMENT_EXTERNALSOURCE_LINK, STYLE,DEFAULT_ADDRESS,META_DATA, TBODY, TFOOT;
+terminal String SCRIPT,DOCTYPE,BODY,BREAK,HORIZONTAL_RULE,IMAGE,SOURCE,ALTERNATIVE_NAME, PARRAGRAPH,TABLE,TABLE_ROW,TABLE_ITEM,UNORDERED_LIST,ORDERED_LIST,DEFINITION_LIST;
+terminal String DEFINITION_LIST_ITEM, DEFINITION_LIST_DESCRIPTION,BLOCK_LEVEL_SECTION,BLOCK_LEVEL_INLINE,FORM,INPUT,TYPE,NAME,VALUE,INPUT_ACTION,INPUT_METHOD;
+terminal String COLSPAN,SIZE,IFRAME,IFRAME_FRAMEBORDER,IFRAME_TARGET_LINK,WIDTH,HEIGHT,REFERENCE,LINK, BOLD_FORMATTING, ITALIC_FORMATTING,TEXT, LIST_ITEM;
+terminal String CODEF,STRONG,ROWSPAN,CLOSE_DECLARATION, HTML, START_TAG, CLOSE_TAG, END_TAG , HEAD, ID,HORIZONAL_RULE;
+terminal String CHECKED,ROWS,COLUMNS,PRESERVE,CITE,BLOCKQUOTE,AXIS,ABBR,ADDRESS, SELECT, OPTION, XML_SPACE, HTTP_EQUIVALENT, STRING, ERROR_UNTERM_STRING, XML, CONTENT , SUMMARY, LANGUAGE, SCOPE, SELECTED, TITLE, TABLE_BODY;
+terminal String ACCESSKEY,TEXTAREA, EMPHASIS,HEADERS,CLASS, CAPTION, EQUALS, COLUMN, META_DECLARATION, XMLNS,ERROR,XML_LANGUAGE, TABLE_HEAD,ENCODING,XMLNS_XSI, TABLE_HEADER,ERROR_UNTERM_COMMENT, TABLE_FOOT, VERSION;
+terminal integer NUMBER;
+
+
+/*---------------------------------------NO-TERMINALES-----------------------------------------*/
+non terminal headingClass,pres,preDeclaration,blockclassPlus,cite,dl,ul,ol,dt,dd,abbrOp,cellValign,cellHalign,thORtd,trAtributes,trPlus,table,widthOp,heightOp,imageDeclaration,optionOp,doctypeDeclaration,htmlDeclaration,headDeclaration ,xhtmlHeadElements ,bodyDeclaration ,xhtmlElements ,formXhtmlElements;
+non terminal accesskeyOp,input,blockquote,codeFont,strong,dtORdd,listClass,axisOp,caption,td,th,tr,captionOp,imageAtributes,blockMix,blockModel,metaDeclaration, meta_atributes, listItems,tableRows , tableItems, definitionListItems , definitionListDescription ,endHtml, texto, texto2, asigningOp;
+non terminal checkedOp,typeOp,formAtributes,formClass,em,liPlus,colspanOp,rowspanOp,scopeAtribute,headersOp,summary,spanDeclaration,div,blockClass,flowModel, breakDeclaration, horizontalRuleDeclaration, parragraphDeclaration,tableDeclaration;
+non terminal acceskeyOp,srcOp,valueOp,textArea,enctype,method,li,cellAtributes,title,option, selectAtributes,formctrl, selectDecl,selectedOp, nameOp, sizeOp, id, class, commonAtributes,inline, inline_class,unorderedListDeclaration,orderedListDeclaration , definitionListDeclaration,linkDeclaration ,formDeclaration;
+
+/*======================================= PRECEDENCIA =========================================*/
+precedence left START_TAG, NUMBER, STRING, TEXT;
+
+
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRAMATICA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+start with doctypeDeclaration;
+
+/*<!DOCTYPE text> ...*/
+doctypeDeclaration ::= START_TAG DOCTYPE HTML texto END_TAG htmlDeclaration {::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<html xlmns = "..."> ...*/
+htmlDeclaration ::= START_TAG HTML XMLNS EQUALS STRING XML_LANGUAGE EQUALS STRING LANGUAGE EQUALS STRING END_TAG headDeclaration {::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<head>.... </head>*/
+headDeclaration ::= START_TAG HEAD END_TAG xhtmlHeadElements  START_TAG CLOSE_DECLARATION HEAD END_TAG bodyDeclaration {::}
+                |ERROR {:System.out.println ("Error lexico" );:}
+                ;
+
+
+/*<title>... </title>*/
+xhtmlHeadElements ::= START_TAG TITLE END_TAG texto START_TAG CLOSE_DECLARATION TITLE END_TAG   metaDeclaration {::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<meta http_equiv = "...">*/
+metaDeclaration ::= START_TAG META_DATA meta_atributes CLOSE_DECLARATION END_TAG metaDeclaration {::}
+                    |START_TAG CLOSE_DECLARATION HEAD END_TAG bodyDeclaration {:System.out.println("Encontro salida");:}
+                    ;
+
+meta_atributes ::= HTTP_EQUIVALENT EQUALS STRING CONTENT EQUALS STRING{::}
+                | NAME EQUALS STRING CONTENT EQUALS STRING{:System.out.println("lallala");:}
+                ;
+
+
+/*<body> ... </body>*/
+bodyDeclaration ::= START_TAG BODY commonAtributes END_TAG blockModel {:System.out.println("body declaration");:}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+blockModel ::=  blockMix{:System.out.println("block model 1");:}
+               |blockModel blockMix{:System.out.println("block model 2");:}
+               ;
+
+blockMix ::= blockClass{:System.out.println("block mix");:};
+
+
+/*==========================ELEMENTOS xHTML======================================*/
+             
+/*<br />*/
+breakDeclaration ::= START_TAG BREAK commonAtributes CLOSE_DECLARATION END_TAG {::}
+
+                            ;
+/*<p>... </p>*/
+parragraphDeclaration ::= START_TAG PARRAGRAPH commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION PARRAGRAPH END_TAG {::}
+                        ;
+/*<img...>*/
+imageDeclaration ::= START_TAG IMAGE commonAtributes imageAtributes CLOSE_DECLARATION END_TAG{::};
+
+imageAtributes ::= SOURCE EQUALS STRING widthOp heightOp ALTERNATIVE_NAME EQUALS STRING {::};
+
+widthOp::= WIDTH EQUALS STRING{::}
+           |{::}
+           ;
+
+heightOp::= HEIGHT EQUALS STRING{::}
+           |{::}
+           ;
+
+/*common attributes*/
+id::= ID EQUALS STRING {:System.out.println("id atribute");:}
+      |{:System.out.println("id atribute not");:}
+      ;
+class::= CLASS EQUALS STRING {::}
+      |{::}
+      ;
+title::= TITLE EQUALS STRING {::}
+      |{::}
+      ;
+commonAtributes::= id class title {::}
+                ;
+
+inline::= inline inline_class {::}
+          |inline_class {::}
+          |texto {::}
+          ;
+
+/*inline nesting*/
+inline_class::= formctrl {::}
+               |breakDeclaration {::}
+               |linkDeclaration {::}
+               |imageDeclaration {::}
+               |spanDeclaration {::}
+               |strong {::}
+               |em {::}
+               |codeFont {::}
+               ;
+
+/*<code>...</code>*/
+codeFont::= START_TAG CODEF commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION CODEF END_TAG {::};
+
+/*<em>italic</em>*/
+em::= START_TAG EMPHASIS commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION EMPHASIS END_TAG {::};
+
+/*<strong>...</strong>*/
+strong::= START_TAG STRONG commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION STRONG END_TAG {::};
+
+/*<div>...</div>*/
+div::= START_TAG BLOCK_LEVEL_SECTION commonAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION BLOCK_LEVEL_SECTION END_TAG {:System.out.println("divDeclaration");:};
+
+flowModel::= flowModel inline_class {:System.out.println("FlowModel Inline");:}
+            |flowModel blockClass {::}
+            |texto{::}
+            |{::}
+            ;
+
+blockClass ::=  div  {:System.out.println("div blockClass");:}
+                | START_TAG CLOSE_DECLARATION BODY END_TAG endHtml{::}
+                |parragraphDeclaration {::}
+                |table     {::}
+                |listClass {::}
+               |blockquote {::}
+               |formClass   {::}
+               |preDeclaration {::}
+               |headingClass {::}
+               ;
+
+/*HEADING*/
+headingClass::= START_TAG HEADING1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING1 END_TAG{::}
+                |START_TAG HEADING2 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING2 END_TAG{::}
+                |START_TAG HEADING3 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING3 END_TAG{::}
+                |START_TAG HEADING4 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING4 END_TAG{::}
+                |START_TAG HEADING5 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING5 END_TAG{::}
+                |START_TAG HEADING6 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING6 END_TAG{::}
+                ;
+
+/*<pre>...</pre>*/
+preDeclaration::= START_TAG PRESERVE commonAtributes pres END_TAG inline START_TAG CLOSE_DECLARATION PRESERVE END_TAG{::};
+
+pres::= XML_SPACE EQUALS STRING{::}
+       |{::}
+         ;
+
+/*FORMS*/
+formClass::= START_TAG FORM formAtributes END_TAG blockclassPlus START_TAG CLOSE_DECLARATION FORM END_TAG{::};
+
+formAtributes::= commonAtributes method INPUT_ACTION EQUALS STRING enctype{::};
+
+method::= INPUT_METHOD EQUALS STRING{::}
+         |{::}
+         ;
+enctype::= ENCRIPTION_TYPE EQUALS STRING{::}
+         |{::}
+         ;
+blockclassPlus::= blockClass{::}
+                |blockclassPlus blockClass{::}
+                ;
+formctrl::= selectDecl {::}
+          |input{::}
+          |textArea{::}
+          ;
+
+textArea::= START_TAG TEXTAREA commonAtributes nameOp ROWS EQUALS STRING COLUMNS EQUALS STRING accesskeyOp END_TAG texto START_TAG CLOSE_DECLARATION TEXTAREA END_TAG{::};
+
+
+input::= START_TAG INPUT commonAtributes typeOp nameOp valueOp checkedOp sizeOp  srcOp acceskeyOp END_TAG{::};
+
+typeOp::= TYPE EQUALS STRING{::}
+          |{::};
+valueOp::= VALUE EQUALS STRING{::}
+          |{::};
+
+checkedOp::= CHECKED EQUALS STRING{::}
+          |{::};
+srcOp::= SOURCE EQUALS STRING{::}
+          |{::};
+acceskeyOp::= ACCESSKEY EQUALS STRING{::}
+          |{::};
+
+
+/*BLOCKQUOTE*/
+
+blockquote::= START_TAG BLOCKQUOTE commonAtributes cite END_TAG blockModel START_TAG CLOSE_DECLARATION BLOCKQUOTE END_TAG{::}; 
+
+cite::= CITE EQUALS STRING {::}
+       |{::}
+       ;
+
+/*LIST CLASS*/
+listClass::= ul{::}
+            |ol{::}
+            |dl{::}
+            ;
+
+ul::= START_TAG UNORDERED_LIST commonAtributes END_TAG liPlus START_TAG CLOSE_DECLARATION UNORDERED_LIST END_TAG {::};
+
+li::= START_TAG LIST_ITEM commonAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION LIST_ITEM END_TAG {::};
+
+liPlus::= li{::}
+         |liPlus li{::}
+         ;
+
+ol::= START_TAG ORDERED_LIST commonAtributes END_TAG liPlus START_TAG CLOSE_DECLARATION ORDERED_LIST END_TAG {::};
+
+dl::= START_TAG DEFINITION_LIST commonAtributes END_TAG dtORdd START_TAG CLOSE_DECLARATION DEFINITION_LIST END_TAG {::};
+
+dt::= START_TAG DEFINITION_LIST_ITEM commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION DEFINITION_LIST_ITEM END_TAG {::};
+
+dd::= START_TAG DEFINITION_LIST_DESCRIPTION commonAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION DEFINITION_LIST_DESCRIPTION END_TAG {::};
+
+dtORdd::= dt{::}
+         |dd{::}
+         |dtORdd dt{::}
+         |dtORdd dd{::}
+         ;
+
+/* <table>*/
+table::= START_TAG TABLE commonAtributes summary END_TAG captionOp trPlus START_TAG CLOSE_DECLARATION TABLE END_TAG {::};
+
+trPlus::= tr{::}
+          |trPlus tr{::}
+          ;
+
+tr::= START_TAG TABLE_ROW trAtributes END_TAG thORtd START_TAG CLOSE_DECLARATION TABLE_ROW END_TAG{::};
+
+thORtd::= th{::}
+         |td{::}
+         |thORtd th{::}
+         |thORtd td{::}
+         ;
+
+trAtributes::= commonAtributes cellHalign cellValign{::};
+
+cellHalign::=ALIGN EQUALS STRING{::}
+            |{::}
+            ;
+cellValign::=VALIGN EQUALS STRING{::}
+            |{::}
+            ;
+
+summary::= SUMMARY EQUALS STRING{::}
+          |{::}
+          ;
+
+captionOp::= caption {::}
+            |{::}
+            ;
+
+/*<td>...</td>*/
+td::= START_TAG TABLE_ITEM cellAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION TABLE_ITEM END_TAG {::};
+
+/*<th>...</th>*/
+th::= START_TAG TABLE_HEADER cellAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION TABLE_HEADER END_TAG {::};
+
+cellAtributes::= commonAtributes abbrOp axisOp headersOp scopeAtribute rowspanOp colspanOp cellHalign cellValign{::};
+
+abbrOp::=  ABBR EQUALS STRING {::}
+           |{::}
+           ;
+axisOp::= AXIS EQUALS STRING{::}
+          |{::}
+          ;
+headersOp::= HEADERS EQUALS STRING{::}
+            |{::}
+            ;
+rowspanOp::= ROWSPAN EQUALS STRING{::}
+            |{::}
+            ;
+colspanOp::=COLSPAN EQUALS STRING{::}
+            |{::}
+            ;
+
+scopeAtribute::= SCOPE EQUALS STRING{::}
+               |{::}
+               ;
+
+/*<caption>...</caption>*/
+caption::= START_TAG CAPTION commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION CAPTION END_TAG{::};
+
+
+/*<select>...</select>*/
+selectDecl::= START_TAG SELECT commonAtributes selectAtributes END_TAG option {::};
+
+/*<option>...</option>*/
+option ::= START_TAG OPTION commonAtributes selectedOp END_TAG texto START_TAG CLOSE_DECLARATION OPTION END_TAG optionOp{::};
+
+optionOp::= option {::}
+           |START_TAG CLOSE_DECLARATION SELECT END_TAG {::}
+           ;
+
+selectAtributes::= nameOp sizeOp{::};
+
+nameOp ::= NAME EQUALS STRING{::}
+         | {::};
+sizeOp ::= SIZE EQUALS STRING{::}
+        | {::};
+
+selectedOp::= SELECTED EQUALS STRING{::}
+            |{::}
+            ;
+
+/*<span>...</span>*/
+spanDeclaration ::= START_TAG BLOCK_LEVEL_INLINE commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION  BLOCK_LEVEL_INLINE END_TAG{::};
+
+
+
+/*<a href = "...">.... </a>*/
+linkDeclaration ::= START_TAG LINK REFERENCE EQUALS STRING commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION LINK END_TAG {::}
+                    ;
+
+
+
+/*============================LOS ELEMENTOS DEL FORM============================*/             
+   
+
+
+endHtml::=  START_TAG CLOSE_DECLARATION HTML END_TAG {::}
+            |{:System.out.println ("Error sintactico en la sentencia del html");:}
+            |ERROR {:System.out.println ("Error lexico" );:}
+            ;
+
+texto ::= texto STRING
+        | texto TEXT
+        | texto NUMBER
+        | texto2
+        ;
+
+texto2 ::=  STRING
+        | NUMBER
+        | TEXT
+        ;

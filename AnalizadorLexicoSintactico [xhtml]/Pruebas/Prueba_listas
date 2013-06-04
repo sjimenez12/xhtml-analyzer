@@ -1,0 +1,28 @@
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title> Strict DTD XHTML Example </title>
+</head>
+<body>
+
+<ul>
+<li>Unordered information. </li>
+<li>Ordered information. </li>
+<li>Navigation information. </li>
+<li>Definitions. </li>
+</ul>
+
+<dl>
+<dt><strong>Lower cost</strong></dt>
+<dd>The new iteration of this product costs significantly less than the
+previous one!</dd>
+<dt><em>Easier to use</em></dt>
+<dd>So much easier</dd>
+<dt><code>Safe for kids</code></dt>
+<dd>You can leave your kids alone with this product and
+they wont get hurt but not guaranteed</dd>
+</dl>
+
+

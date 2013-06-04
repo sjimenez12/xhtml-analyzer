@@ -1,0 +1,27 @@
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title> Strict DTD XHTML Example </title>
+</head>
+<body>
+
+<blockquote cite="http://example.net/armstrong/">
+<p>That is one small step for man but one giant leap for mankind</p>
+</blockquote>
+
+<pre>
+      ESTO NO TIENE FORMATO    NO   
+            NO    NO       NO    NO
+</pre>
+
+<h1 id="sirve">First level </h1>
+           <h2>Second level </h2>
+           <h3>Third level </h3>
+           <h4>Fourth level </h4>
+           <h5>Fifth level </h5>
+           <h6>Sixth level </h6>
+
+</body>
+</html>
