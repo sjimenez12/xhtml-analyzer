@@ -1,0 +1,861 @@
+package AnalizadorLexicoSintactico;
+import java.util.*;
+import java.io.*;
+import java_cup.runtime.*;
+import javax.swing.JFileChooser;
+
+parser code
+{:
+    public ArrayList<Node> mainScope = new ArrayList<Node>(); 
+    public ArrayList<Node> parametros = new ArrayList<Node> ();
+    public ArrayList<Node> parametrosImg = new ArrayList<Node> ();
+
+    public Symbol getCur_token() {
+            return cur_token;
+        }
+     
+    public void syntax_error(Symbol s){
+        report_error("Error de sintaxis. Linea: " + (s.right + 1) +
+        " Columna: " + s.left/(s.right + 1) + ". Texto: \"" + s.value + "\"", null);
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws
+    java.lang.Exception {
+        report_fatal_error("", null);
+    } 
+
+    public Node getLastInserted (){
+        Node aux = mainScope.get(mainScope.size() - 1);
+        return aux;
+    }
+
+    public void printScope (){
+        for (Node x : mainScope) {
+                    if (x != null) {
+                        String label = x.getLabel();
+                        int row = x.getRow();
+                        int col = x.getColumn();
+                        System.out.println(label + " (Linea: " + row + "  Columna: " + col+ ")");
+
+                        if (x.getParametros() != null) {
+                            for (Node y : x.getParametros()) {
+                                String label2 = y.getLabel();
+                                String value = y.getValue();                  
+                                System.out.println("└" + label2 + " =" + value );
+                            }
+                        }
+                    }
+                }
+      }
+
+ 
+:};
+
+action code {:
+
+    public void checkType(String given, String expected, int linea){
+    System.out.println("......................" );
+    System.out.println("Error semantico en linea = "+ linea + " Se esperaba tipo="+ expected+"  " +"y se encontro=" + given );
+    System.out.println("......................" );
+    }
+
+Quicksort m = new Quicksort();
+:}
+
+/*------------------------------------------TERMINALES-----------------------------------------*/
+terminal String HEADING1,HEADING2,HEADING3,HEADING4,HEADING5,HEADING6,ENCRIPTION_TYPE,VALIGN,ALIGN,SEMI,SEMICOLON, COMA, LPAR, RPAR, LCBRACE, RCBRACE,DOCUMENT_EXTERNALSOURCE_LINK, STYLE,DEFAULT_ADDRESS,META_DATA, TBODY, TFOOT;
+terminal String SCRIPT,DOCTYPE,BODY,BREAK,HORIZONTAL_RULE,IMAGE,SOURCE,ALTERNATIVE_NAME, PARRAGRAPH,TABLE,TABLE_ROW,TABLE_ITEM,UNORDERED_LIST,ORDERED_LIST,DEFINITION_LIST;
+terminal String DEFINITION_LIST_ITEM, DEFINITION_LIST_DESCRIPTION,BLOCK_LEVEL_SECTION,BLOCK_LEVEL_INLINE,FORM,INPUT,TYPE,NAME,VALUE,INPUT_ACTION,INPUT_METHOD;
+terminal String COLSPAN,SIZE,IFRAME,IFRAME_FRAMEBORDER,IFRAME_TARGET_LINK,WIDTH,HEIGHT,REFERENCE,LINK, BOLD_FORMATTING, ITALIC_FORMATTING,TEXT, LIST_ITEM;
+terminal String CODEF,STRONG,ROWSPAN,CLOSE_DECLARATION, HTML, START_TAG, CLOSE_TAG, END_TAG , HEAD, ID,HORIZONAL_RULE;
+terminal String CHECKED,ROWS,COLUMNS,PRESERVE,CITE,BLOCKQUOTE,AXIS,ABBR,ADDRESS, SELECT, OPTION, XML_SPACE, HTTP_EQUIVALENT, STRING, ERROR_UNTERM_STRING, XML, CONTENT , SUMMARY, LANGUAGE, SCOPE, SELECTED, TITLE, TABLE_BODY;
+terminal String STRINGNUM,STRINGDIR,STRINGURL,ACCESSKEY,TEXTAREA, EMPHASIS,HEADERS,CLASS, CAPTION, EQUALS, COLUMN, META_DECLARATION, XMLNS,ERROR,XML_LANGUAGE, TABLE_HEAD,ENCODING,XMLNS_XSI, TABLE_HEADER,ERROR_UNTERM_COMMENT, TABLE_FOOT, VERSION;
+terminal integer NUMBER;
+
+
+/*---------------------------------------NO-TERMINALES-----------------------------------------*/
+non terminal stringNum,headingClass,pres,preDeclaration,blockclassPlus,cite,dl,ul,ol,dt,dd,abbrOp,cellValign,cellHalign,thORtd,trAtributes,trPlus,table,widthOp,heightOp,imageDeclaration,optionOp,doctypeDeclaration,htmlDeclaration,headDeclaration ,xhtmlHeadElements ,bodyDeclaration ,xhtmlElements ,formXhtmlElements;
+non terminal stringDir,reference,accesskeyOp,input,blockquote,codeFont,strong,dtORdd,listClass,axisOp,caption,td,th,tr,captionOp,imageAtributes,blockMix,blockModel,metaDeclaration, meta_atributes, listItems,tableRows , tableItems, definitionListItems , definitionListDescription ,endHtml, texto, texto2, asigningOp;
+non terminal checkedOp,typeOp,formAtributes,formClass,em,liPlus,colspanOp,rowspanOp,scopeAtribute,headersOp,summary,spanDeclaration,div,blockClass,flowModel, breakDeclaration, horizontalRuleDeclaration, parragraphDeclaration,tableDeclaration;
+non terminal stringUrl,acceskeyOp,srcOp,valueOp,textArea,enctype,method,li,cellAtributes,title,option, selectAtributes,formctrl, selectDecl,selectedOp, nameOp, sizeOp, id, class, commonAtributes,inline, inline_class,unorderedListDeclaration,orderedListDeclaration , definitionListDeclaration,linkDeclaration ,formDeclaration;
+
+/*======================================= PRECEDENCIA =========================================*/
+precedence left START_TAG, NUMBER, STRING, TEXT;
+
+
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRAMATICA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+start with doctypeDeclaration;
+
+/*<!DOCTYPE text> ...*/
+doctypeDeclaration ::= START_TAG DOCTYPE:p1 HTML texto END_TAG htmlDeclaration 
+                    {:
+                        Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                    :}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<html xlmns = "..."> ...*/
+htmlDeclaration ::= START_TAG HTML:m XMLNS:p1 EQUALS stringUrl:s1 XML_LANGUAGE:p2 EQUALS STRING:s2 LANGUAGE:p3 EQUALS STRING:s3 END_TAG headDeclaration 
+                    {:
+                    this.parser.parametros= new ArrayList<Node>();
+                    Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                    par1.setValue (s1.toString());
+                    this.parser.parametros.add(par1);
+
+                    Node par2 =new Node (p2, (p2right + 1),(p2left/(p2right + 1)));
+                    par2.setValue (s2);
+                    this.parser.parametros.add(par2);
+
+                    Node par3 =new Node (p3, (p3right + 1),(p3left/(p3right + 1)));
+                    par3.setValue (s3);
+                    this.parser.parametros.add(par3);
+
+                    this.parser.mainScope.add(new Node (m,(mright + 1),(mleft/(mright + 1)), this.parser.parametros ));
+                    :}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*Verificar URL*/
+stringUrl::= STRING:s {:checkType(s, "URL", (sright));:}
+         |STRINGDIR:s {:checkType(s, "URL",(sright) );:}
+         |STRINGURL:s {:RESULT= s;:}
+         |STRINGNUM:s {:checkType(s, "URL",(sright));:};
+
+/*Verificar Direccion local*/
+stringDir::= STRING:s {:checkType(s, "Direccion local", (sright));:}
+         |STRINGDIR:s {:RESULT=s;:}
+         |STRINGURL:s {:checkType(s, "Direccion local",(sright) );:}
+         |STRINGNUM:s {:checkType(s, "Direccion local",(sright));:};
+
+/*Verificar Numeros*/
+stringNum::= STRING:s {:checkType(s, "Numero", (sright));:}
+         |STRINGDIR:s {:checkType(s, "Numero",(sright) );:}
+         |STRINGURL:s {:checkType(s, "Numero",(sright) );:}
+         |STRINGNUM:s {:RESULT=s;:};
+
+
+
+
+/*<head>.... </head>*/
+headDeclaration ::= START_TAG HEAD:p1 END_TAG xhtmlHeadElements bodyDeclaration 
+                {:
+                    Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                :}
+                |ERROR {:System.out.println ("Error lexico" );:}
+                ;
+
+
+/*<title>... </title>*/
+xhtmlHeadElements ::= START_TAG TITLE:p1 END_TAG texto START_TAG CLOSE_DECLARATION TITLE END_TAG   metaDeclaration 
+                    {:
+                        Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            this.parser.mainScope.add (aux);
+                    :}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<meta http_equiv = "...">*/
+metaDeclaration ::= START_TAG META_DATA:p1 meta_atributes:m CLOSE_DECLARATION END_TAG metaDeclaration 
+                    {:
+                        Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros ((ArrayList)m);
+                            this.parser.mainScope.add (aux);
+                    :}
+                    |START_TAG CLOSE_DECLARATION HEAD END_TAG {::}
+                    ;
+
+meta_atributes ::= HTTP_EQUIVALENT:p1 EQUALS STRING:s1 CONTENT:p2 EQUALS STRING:s2
+                {:
+                    this.parser.parametros= new ArrayList<Node>();
+                        Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                        par1.setValue (s1);
+                        this.parser.parametros.add(par1);
+
+                        Node par2 =new Node (p2, (p2right + 1),(p2left/(p2right + 1)));
+                        par2.setValue (s2);
+                        this.parser.parametros.add(par2);      
+
+                        RESULT= this.parser.parametros;
+                :}
+                | NAME:p1 EQUALS STRING:s1 CONTENT:p2 EQUALS STRING:s2
+                {:
+                     this.parser.parametros= new ArrayList<Node>();
+                        Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                        par1.setValue (s1);
+                        this.parser.parametros.add(par1);
+
+                        Node par2 =new Node (p2, (p2right + 1),(p2left/(p2right + 1)));
+                        par2.setValue (s2);
+                        this.parser.parametros.add(par2);      
+
+                        RESULT= this.parser.parametros;
+                :}
+                ;
+
+
+/*<body> ... </body>*/
+bodyDeclaration ::= START_TAG BODY:p1 commonAtributes:at END_TAG blockModel 
+                    {:
+                        Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros ((ArrayList)at);
+                            this.parser.mainScope.add (aux);
+                    :}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+blockModel ::=  blockMix{::}
+               |blockModel blockMix{::}
+               ;
+
+blockMix ::= blockClass{::};
+
+
+/*==========================ELEMENTOS xHTML======================================*/
+             
+/*<br />*/
+breakDeclaration ::= START_TAG BREAK:p1 commonAtributes CLOSE_DECLARATION END_TAG 
+                    {:
+                            Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                    :}
+                            ;
+/*<p>... </p>*/
+parragraphDeclaration ::= START_TAG PARRAGRAPH:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION PARRAGRAPH END_TAG 
+                        {:
+                            Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                        :}
+                        ;
+/*<img...>*/
+imageDeclaration ::= START_TAG IMAGE:p1 commonAtributes:at imageAtributes:ia CLOSE_DECLARATION END_TAG
+                    {:
+                        Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+
+ArrayList<Node> parametrotemp = new ArrayList<Node> ((ArrayList)at);
+parametrotemp.addAll((ArrayList)ia);
+
+                        aux.setParametros (parametrotemp);
+                        this.parser.mainScope.add (aux);
+                        
+                     :}
+                    ;
+
+imageAtributes ::= SOURCE:p1 EQUALS stringDir:s1 widthOp:w heightOp:h ALTERNATIVE_NAME:p2 EQUALS STRING:s2 
+                    {:
+                        this.parser.parametrosImg= new ArrayList<Node>();
+                        Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                        par1.setValue (s1.toString());
+                        this.parser.parametrosImg.add(par1);
+
+                        Node par2 =new Node (p2, (p2right + 1),(p2left/(p2right + 1)));
+                        par2.setValue (s2);
+                        this.parser.parametrosImg.add(par2);      
+                        
+                        if ((Node)w != null)
+                        this.parser.parametrosImg.add((Node)w);
+                        if ((Node)h != null)
+                        this.parser.parametrosImg.add((Node)h);
+
+                        RESULT= this.parser.parametrosImg;
+                    :}
+                    ;
+
+widthOp::= WIDTH:p1 EQUALS stringNum:s1
+            {:
+                
+                Node par3 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par3.setValue (s1.toString());
+                RESULT=par3;
+
+            :}
+           |{::}
+           ;
+
+heightOp::= HEIGHT:p1 EQUALS stringNum:s1
+            {:
+                
+               Node par3 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par3.setValue (s1.toString());
+                RESULT=par3;
+
+            :}
+           |{::}
+           ;
+
+/*common attributes*/
+id::= ID:p1 EQUALS STRING:s1
+        {:
+
+            Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+            par1.setValue (s1);
+            RESULT=par1;
+       
+        :}
+      |{::}
+      ;
+class::= CLASS:p1 EQUALS STRING :s1
+       {:
+            Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+            par1.setValue (s1);
+            RESULT=par1;
+        :}
+      |{::}
+      ;
+title::= TITLE:p1 EQUALS STRING:s1
+        {:
+            Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+            par1.setValue (s1);
+            RESULT=par1;
+        :}
+      |{::}
+      ;
+commonAtributes::= id:i class:c title:t
+    {:
+        this.parser.parametros= new ArrayList<Node>();
+        if((Node)i != null)
+        this.parser.parametros.add((Node)i);
+        if((Node)c != null)
+        this.parser.parametros.add((Node)c);    
+        if((Node)t != null)
+        this.parser.parametros.add((Node)t);
+        RESULT=this.parser.parametros;
+    :}
+                ;
+
+inline::= inline inline_class {::}
+          |inline_class {::}
+          |texto {::}
+          ;
+
+/*inline nesting*/
+inline_class::= formctrl {::}
+               |breakDeclaration {::}
+               |linkDeclaration {::}
+               |imageDeclaration {::}
+               |spanDeclaration {::}
+               |strong {::}
+               |em {::}
+               |codeFont {::}
+               ;
+
+/*<code>...</code>*/
+codeFont::= START_TAG CODEF:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION CODEF END_TAG 
+                        {:
+                            Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                        :}
+                        ;
+
+
+/*<em>italic</em>*/
+em::= START_TAG EMPHASIS:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION EMPHASIS END_TAG 
+                        {:
+                            Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                        :}
+                        ;
+
+/*<strong>...</strong>*/
+strong::= START_TAG STRONG:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION STRONG END_TAG 
+                        {:
+                            Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros (this.parser.parametros);
+                            this.parser.mainScope.add (aux);
+                        :}
+                        ;
+
+/*<div>...</div>*/
+div::= START_TAG BLOCK_LEVEL_SECTION:p1 commonAtributes:p END_TAG flowModel START_TAG CLOSE_DECLARATION BLOCK_LEVEL_SECTION END_TAG 
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                            aux.setParametros ((ArrayList)p);
+                            this.parser.mainScope.add (aux);
+                        :}
+            ;
+
+flowModel::= flowModel inline_class {::}
+            |flowModel blockClass {::}
+            |texto{::}
+            |{::}
+            ;
+
+blockClass ::=  div  {::}
+                | START_TAG CLOSE_DECLARATION BODY END_TAG endHtml{::}
+                |parragraphDeclaration {::}
+                |table     {::}
+                |listClass {::}
+               |blockquote {::}
+               |formClass   {::}
+               |preDeclaration {::}
+               |headingClass {::}
+               ;
+
+/*HEADING*/
+headingClass::= START_TAG HEADING1:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING1 END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                |START_TAG HEADING2:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING2 END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                |START_TAG HEADING3:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING3 END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                |START_TAG HEADING4:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING4 END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                |START_TAG HEADING5:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING5 END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                |START_TAG HEADING6:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION HEADING6 END_TAG 
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros (this.parser.parametros);
+                           this.parser.mainScope.add (aux);
+                        :}
+                ;
+
+/*<pre>...</pre>*/
+preDeclaration::= START_TAG PRESERVE:p1 commonAtributes:at pres END_TAG inline START_TAG CLOSE_DECLARATION PRESERVE END_TAG
+                        {:
+                           Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                           aux.setParametros ((ArrayList)at);
+                           this.parser.mainScope.add (aux);
+                        :}
+                        ;
+
+pres::= XML_SPACE:p1 EQUALS STRING:s1
+                {:
+                    Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                    par1.setValue (s1);
+                    this.parser.parametros.add(par1);
+                :}
+       |{::}
+         ;
+
+/*FORMS*/
+formClass::= START_TAG FORM:p1 formAtributes:fa END_TAG blockclassPlus START_TAG CLOSE_DECLARATION FORM END_TAG
+                {:
+                    Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros ((ArrayList)fa);
+                     this.parser.mainScope.add (aux);
+                :}
+                ;
+
+formAtributes::= commonAtributes:at method:m INPUT_ACTION:p1 EQUALS STRING:s1 enctype:e
+                {:
+                     this.parser.parametros= new ArrayList<Node>((ArrayList)at);
+                        Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                        par1.setValue (s1);
+                        this.parser.parametros.add(par1);
+           
+                        if ((Node)m != null)
+                        this.parser.parametros.add((Node)m);
+                        if ((Node)e != null)
+                        this.parser.parametros.add((Node)e);
+
+                        RESULT= this.parser.parametros;
+                :};
+
+method::= INPUT_METHOD:p1 EQUALS STRING:s1
+                {:
+                  Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                  par1.setValue (s1);
+                  RESULT=par1;
+                :}
+                    |{::}
+                    ;
+
+enctype::= ENCRIPTION_TYPE:p1 EQUALS STRING:s1
+                    {:
+                        Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                        par1.setValue (s1);
+                        RESULT=par1;
+                    :}
+                    |{::}
+                    ;
+
+blockclassPlus::= blockClass{::}
+                |blockclassPlus blockClass{::}
+                ;
+formctrl::= selectDecl {::}
+          |input{::}
+          |textArea{::}
+          ;
+
+textArea::= START_TAG TEXTAREA:m commonAtributes nameOp ROWS:p1 EQUALS STRING:s1 COLUMNS:p2 EQUALS STRING:s2 accesskeyOp END_TAG texto START_TAG CLOSE_DECLARATION TEXTAREA END_TAG{::};
+
+
+input::= START_TAG INPUT commonAtributes typeOp nameOp valueOp checkedOp sizeOp  srcOp acceskeyOp END_TAG{::};
+
+typeOp::= TYPE:p1 EQUALS STRING:s1
+            {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+            :}
+            
+          |{::};
+
+valueOp::= VALUE:p1 EQUALS STRING:s1
+            {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+            :}
+          |{::};
+
+checkedOp::= CHECKED:p1 EQUALS STRING:s1
+            {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+            :}
+          |{::};
+srcOp::= SOURCE:p1 EQUALS STRING:s1
+            {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+            :}
+          |{::};
+acceskeyOp::= ACCESSKEY:p1 EQUALS STRING:s1
+            {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            
+          |{::};
+
+
+/*BLOCKQUOTE*/
+
+blockquote::= START_TAG BLOCKQUOTE:p1 commonAtributes:at cite:c END_TAG blockModel START_TAG CLOSE_DECLARATION BLOCKQUOTE END_TAG
+             {:
+                Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                
+                     ArrayList<Node> parametrotemp = new ArrayList<Node> ((ArrayList)at);
+
+                     if((Node)c!=null)
+                     parametrotemp.add((Node)c);
+
+                     aux.setParametros (parametrotemp);
+                     this.parser.mainScope.add (aux);
+            :}; 
+
+cite::= CITE:p1 EQUALS stringUrl:s1 
+             {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1.toString());
+                RESULT=par1;
+             :}
+       |{::}
+       ;
+
+/*LIST CLASS*/
+listClass::= ul{::}
+            |ol{::}
+            |dl{::}
+            ;
+
+ul::= START_TAG UNORDERED_LIST:p1 commonAtributes END_TAG liPlus START_TAG CLOSE_DECLARATION UNORDERED_LIST END_TAG 
+            {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+
+            :};
+
+li::= START_TAG LIST_ITEM:p1 commonAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION LIST_ITEM END_TAG 
+        {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+
+            :};
+
+liPlus::= li{::}
+         |liPlus li{::}
+         ;
+
+ol::= START_TAG ORDERED_LIST:p1 commonAtributes END_TAG liPlus START_TAG CLOSE_DECLARATION ORDERED_LIST END_TAG 
+            {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+            :};
+
+dl::= START_TAG DEFINITION_LIST:p1 commonAtributes END_TAG dtORdd START_TAG CLOSE_DECLARATION DEFINITION_LIST END_TAG 
+             {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+             :};
+
+dt::= START_TAG DEFINITION_LIST_ITEM:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION DEFINITION_LIST_ITEM END_TAG 
+                {:
+                    Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+                :};
+
+dd::= START_TAG DEFINITION_LIST_DESCRIPTION:p1 commonAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION DEFINITION_LIST_DESCRIPTION END_TAG 
+                {:
+                    Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+                :};
+
+dtORdd::= dt{::}
+         |dd{::}
+         |dtORdd dt{::}
+         |dtORdd dd{::}
+         ;
+
+/* <table>*/
+table::= START_TAG TABLE:p1 commonAtributes:at summary:s END_TAG captionOp trPlus START_TAG CLOSE_DECLARATION TABLE END_TAG 
+            {:
+                  Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                  this.parser.parametros= new ArrayList<Node>((ArrayList)at);
+                  if((Node)s!=null)
+                  this.parser.parametros.add((Node)s);
+                  aux.setParametros (this.parser.parametros);
+                  this.parser.mainScope.add (aux);
+            :};
+
+trPlus::= tr{::}
+          |trPlus tr{::}
+          ;
+
+tr::= START_TAG TABLE_ROW:p1 trAtributes END_TAG thORtd START_TAG CLOSE_DECLARATION TABLE_ROW END_TAG
+        {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+thORtd::= th{::}
+         |td{::}
+         |thORtd th{::}
+         |thORtd td{::}
+         ;
+
+trAtributes::= commonAtributes cellHalign cellValign{::};
+
+cellHalign::=ALIGN:p1 EQUALS STRING:s1
+                {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+cellValign::=VALIGN:p1 EQUALS STRING:s1
+
+             {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+
+summary::= SUMMARY:p1 EQUALS STRING:s1
+             {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                RESULT=par1;
+             :}
+          |{::}
+          ;
+
+captionOp::= caption {::}
+            |{::}
+            ;
+
+/*<td>...</td>*/
+td::= START_TAG TABLE_ITEM:p1 cellAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION TABLE_ITEM END_TAG{:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+/*<th>...</th>*/
+th::= START_TAG TABLE_HEADER:p1 cellAtributes END_TAG flowModel START_TAG CLOSE_DECLARATION TABLE_HEADER END_TAG{:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+cellAtributes::= commonAtributes abbrOp axisOp headersOp scopeAtribute rowspanOp colspanOp cellHalign cellValign{::};
+
+abbrOp::=  ABBR:p1 EQUALS STRING:s1 {:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+           |{::}
+           ;
+axisOp::= AXIS:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+          |{::}
+          ;
+headersOp::= HEADERS:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+rowspanOp::= ROWSPAN:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+colspanOp::=COLSPAN:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+
+scopeAtribute::= SCOPE:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+               |{::}
+               ;
+
+/*<caption>...</caption>*/
+caption::= START_TAG CAPTION:p1 commonAtributes END_TAG inline START_TAG CLOSE_DECLARATION CAPTION END_TAG{:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+
+/*<select>...</select>*/
+selectDecl::= START_TAG SELECT:p1 commonAtributes selectAtributes END_TAG option {:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+/*<option>...</option>*/
+option ::= START_TAG OPTION:p1 commonAtributes selectedOp END_TAG texto START_TAG CLOSE_DECLARATION OPTION END_TAG optionOp{:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros (this.parser.parametros);
+                     this.parser.mainScope.add (aux);
+        :};
+
+optionOp::= option {::}
+           |START_TAG CLOSE_DECLARATION SELECT END_TAG {::}
+           ;
+
+selectAtributes::= nameOp sizeOp{::};
+
+nameOp ::= NAME:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+         | {::};
+sizeOp ::= SIZE:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+        | {::};
+
+selectedOp::= SELECTED:p1 EQUALS STRING:s1{:
+                Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                par1.setValue (s1);
+                this.parser.parametros.add(par1);
+             :}
+            |{::}
+            ;
+
+/*<span>...</span>*/
+spanDeclaration ::= START_TAG BLOCK_LEVEL_INLINE:p1 commonAtributes:at END_TAG inline START_TAG CLOSE_DECLARATION  BLOCK_LEVEL_INLINE END_TAG{:
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+                     aux.setParametros ((ArrayList)at);
+                     this.parser.mainScope.add (aux);
+        :};
+
+
+
+/*<a href = "...">.... </a>*/
+linkDeclaration ::= START_TAG LINK:p1 reference:r commonAtributes:at END_TAG inline START_TAG CLOSE_DECLARATION LINK END_TAG {:
+
+                     Node aux = new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+ArrayList<Node> parametrotemp = new ArrayList<Node> ((ArrayList)at);
+ parametrotemp.add((Node)r);
+
+                     aux.setParametros (parametrotemp);
+                     this.parser.mainScope.add (aux);
+        :}
+                    ;
+reference::= REFERENCE:p1 EQUALS stringDir:s1
+        {:
+            Node par1 =new Node (p1, (p1right + 1),(p1left/(p1right + 1)));
+            par1.setValue (s1.toString());
+            RESULT=par1;
+
+        :};
+
+
+
+
+/*============================LOS ELEMENTOS DEL FORM============================*/             
+   
+
+
+endHtml::=  START_TAG CLOSE_DECLARATION HTML END_TAG {:m.sort(parser.mainScope);parser.printScope();
+System.out.println("=================================================================================");:}
+            |{:System.out.println ("Error sintactico en la sentencia del html");:}
+            |ERROR {:System.out.println ("Error lexico" );:}
+            ;
+
+texto ::= texto STRING
+        | texto TEXT
+        | texto STRINGURL
+        | texto NUMBER
+        | texto2
+        ;
+
+texto2 ::=  STRING
+        | STRINGURL
+        | NUMBER
+        | TEXT
+        ;

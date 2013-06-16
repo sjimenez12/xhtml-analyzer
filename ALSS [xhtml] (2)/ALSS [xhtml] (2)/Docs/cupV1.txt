@@ -1,0 +1,199 @@
+package AnalizadorLexicoSintactico;
+import java.util.*;
+import java.io.*;
+import java_cup.runtime.*;
+import javax.swing.JFileChooser;
+
+parser code
+{:	
+         public Symbol getCur_token() {
+            return cur_token;
+        }
+       
+	public void syntax_error(Symbol s){
+		report_error("Error de sintaxis. Linea: " + (s.right + 1) +
+		" Columna: " + s.left/(s.right + 1) + ". Texto: \"" + s.value + "\"", null);
+	}
+
+	public void unrecovered_syntax_error(Symbol s) throws
+	java.lang.Exception {
+		report_fatal_error("", null);
+	}	
+:};
+
+
+/*------------------------------------------TERMINALES-----------------------------------------*/
+terminal String SEMI,SEMICOLON, COMA, LPAR, RPAR, LCBRACE, RCBRACE,DOCUMENT_EXTERNALSOURCE_LINK, STYLE,DEFAULT_ADDRESS,META_DATA, TBODY, TFOOT;
+terminal String SCRIPT,DOCTYPE,BODY,BREAK,HORIZONTAL_RULE,IMAGE,SOURCE,ALTERNATIVE_NAME, PARRAGRAPH,TABLE,TABLE_ROW,TABLE_ITEM,UNORDERED_LIST,ORDERED_LIST,DEFINITION_LIST;
+terminal String DEFINITION_LIST_ITEM, DEFINITION_LIST_DESCRIPTION,BLOCK_LEVEL_SECTION,BLOCK_LEVEL_INLINE,FORM,INPUT,TYPE,NAME,VALUE,INPUT_ACTION,INPUT_METHOD;
+terminal String IFRAME,IFRAME_FRAMEBORDER,IFRAME_TARGET_LINK,WIDTH,HEIGHT,REFERENCE,LINK, BOLD_FORMATTING, ITALIC_FORMATTING,TEXT,HEADING, LIST_ITEM;
+terminal String CLOSE_DECLARATION, HTML, START_TAG, CLOSE_TAG, END_TAG , HEAD, ID,HORIZONAL_RULE;
+terminal String ADDRESS, SELECT, OPTION, XML_SPACE, HTTP_EQUIVALENT, STRING, ERROR_UNTERM_STRING, XML, CONTENT , SUMMARY, LANGUAGE, SCOPE, SELECTED, TITLE, TABLE_BODY;
+terminal String CAPTION, EQUALS, COLUMN, META_DECLARATION, XMLNS,ERROR,XML_LANGUAGE, TABLE_HEAD,ENCODING,XMLNS_XSI, TABLE_HEADER,ERROR_UNTERM_COMMENT, TABLE_FOOT, VERSION;
+terminal integer NUMBER;
+
+
+/*---------------------------------------NO-TERMINALES-----------------------------------------*/
+non terminal doctypeDeclaration,htmlDeclaration,headDeclaration ,xhtmlHeadElements ,bodyDeclaration ,xhtmlElements ,formXhtmlElements;
+non terminal listItems,tableRows , tableItems, definitionListItems , definitionListDescription ,endHtml, texto, texto2, asigningOp;
+non terminal breakDeclaration, horizontalRuleDeclaration, parragraphDeclaration,tableDeclaration;
+non terminal unorderedListDeclaration,orderedListDeclaration , definitionListDeclaration,linkDeclaration ,headingDeclaration ,formDeclaration;
+
+/*======================================= PRECEDENCIA =========================================*/
+precedence left START_TAG, NUMBER, STRING, TEXT;
+
+
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ GRAMATICA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+start with doctypeDeclaration;
+
+/*<!DOCTYPE text> ...*/
+doctypeDeclaration ::= START_TAG DOCTYPE texto END_TAG htmlDeclaration {::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    ;
+
+/*<html xlmns = "..."> ...*/
+htmlDeclaration ::= START_TAG HTML XMLNS EQUALS STRING END_TAG headDeclaration {::}
+                    |{:System.out.print ("Error sintactico en la sentencia del html");:}
+                    |ERROR:e {:System.out.println ("Error lexico" + e );:}
+                    ;
+
+/*<head>.... </head>*/
+headDeclaration ::= START_TAG HEAD END_TAG xhtmlHeadElements START_TAG CLOSE_DECLARATION HEAD END_TAG bodyDeclaration {::}
+                |{:System.out.print ("Error sintactico en la declaracion del head");:}
+                |ERROR {:System.out.println ("Error lexico" );:}
+                ;
+
+
+/*<title>... </title>*/
+xhtmlHeadElements ::= START_TAG TITLE END_TAG texto START_TAG CLOSE_DECLARATION TITLE END_TAG {::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    |{:System.out.print ("Error sintactico en la declaracion del head");:}
+                    ;
+
+
+/*<body> ... </body>*/
+bodyDeclaration ::= START_TAG BODY END_TAG xhtmlElements START_TAG CLOSE_DECLARATION BODY END_TAG endHtml{::}
+                    |ERROR {:System.out.println ("Error lexico" );:}
+                    |{:System.out.println ("Error sintactico en la sentencia del body");:}
+                    ;
+
+
+xhtmlElements ::=  breakDeclaration xhtmlElements {::} 
+                   |horizontalRuleDeclaration xhtmlElements {::} 
+                   |parragraphDeclaration xhtmlElements {::} 
+                   |unorderedListDeclaration xhtmlElements {::} 
+                   |orderedListDeclaration xhtmlElements {::} 
+                   |definitionListDeclaration xhtmlElements {::} 
+                   |linkDeclaration xhtmlElements {::} 
+                   |headingDeclaration xhtmlElements {::} 
+                   |formDeclaration xhtmlElements {::} 
+                   |ERROR {:System.out.println ("Error lexico" );:}
+                   |{:System.out.println ("Error sintactico!!!");:}
+                   ;
+
+/*==========================ELEMENTOS xHTML======================================*/
+               
+/*<br />*/
+breakDeclaration ::= START_TAG BREAK CLOSE_DECLARATION END_TAG {::} 
+                    ;
+/*<hr />*/
+horizontalRuleDeclaration ::= START_TAG HORIZONAL_RULE CLOSE_DECLARATION END_TAG {::} 
+                            ;
+/*<p>... </p>*/
+parragraphDeclaration ::= START_TAG PARRAGRAPH asigningOp END_TAG texto START_TAG CLOSE_DECLARATION PARRAGRAPH END_TAG {::} 
+                    ;
+/*<table ...> ... </table>*/
+tableDeclaration ::= START_TAG TABLE asigningOp END_TAG tableRows START_TAG CLOSE_DECLARATION TABLE END_TAG {::}
+                    ;
+            /*<tl>... </tl>*/
+            tableRows::= START_TAG TABLE_ROW END_TAG tableItems START_TAG CLOSE_DECLARATION TABLE_ROW END_TAG {::}
+                        |{:System.out.println ("Error sintactico en la definicion de tabla");:}
+                        ;
+                        /*<td>....</td>*/
+                        tableItems ::= START_TAG TABLE_ITEM END_TAG   texto     START_TAG CLOSE_DECLARATION TABLE_ITEM END_TAG {::}
+                                      |{:System.out.println ("Error sintactico en la definicion de tabla");:}
+                                      ;
+
+
+/*<ul>... </ul>*/
+unorderedListDeclaration ::= START_TAG UNORDERED_LIST END_TAG  listItems START_TAG CLOSE_DECLARATION UNORDERED_LIST END_TAG{::}
+                            ;
+/*<ol>... </ol>*/
+orderedListDeclaration ::= START_TAG ORDERED_LIST END_TAG  listItems START_TAG CLOSE_DECLARATION ORDERED_LIST END_TAG{::}
+                            ;
+            /*<li>... </li>*/
+            listItems::=  START_TAG LIST_ITEM END_TAG  texto START_TAG CLOSE_DECLARATION LIST_ITEM END_TAG{::}
+                          |{:System.out.println("Error sintactico en la defincion de la lista");:}
+                          ;
+
+
+/*<dl>... </dl>*/
+definitionListDeclaration ::= START_TAG DEFINITION_LIST END_TAG  definitionListItems START_TAG CLOSE_DECLARATION DEFINITION_LIST END_TAG {::}
+                                ;  
+            /*<dl>...</dl>*/                        
+            definitionListItems::=  START_TAG DEFINITION_LIST_ITEM END_TAG  definitionListDescription START_TAG CLOSE_DECLARATION DEFINITION_LIST_ITEM END_TAG {::}
+                                   | {:System.out.println ("Error sintactico en la definicion de lista descriptiva");:}
+                                   ;
+                            /*<dd>...</dd>*/                        
+                            definitionListDescription::= START_TAG DEFINITION_LIST_DESCRIPTION END_TAG texto  START_TAG CLOSE_DECLARATION DEFINITION_LIST_DESCRIPTION END_TAG {::}
+                                                        |{:System.out.println ("Error sintactico en la definicion de lista descriptiva");:}
+                                                        ;
+
+/*<a href = "...">.... </a>*/
+linkDeclaration ::= START_TAG LINK REFERENCE EQUALS STRING END_TAG  texto START_TAG CLOSE_DECLARATION LINK  END_TAG {::}
+                    ;  
+
+/*<h>...</h>*/
+headingDeclaration ::=START_TAG HEADING END_TAG texto START_TAG CLOSE_DECLARATION HEADING END_TAG {::} 
+                        ;    
+      
+/*<form ...> ... </form>*/
+formDeclaration ::= START_TAG FORM asigningOp END_TAG formXhtmlElements START_TAG CLOSE_DECLARATION FORM END_TAG {::}
+                    ; 
+
+            formXhtmlElements ::= texto  {::} formXhtmlElements
+                                |START_TAG INPUT asigningOp END_TAG {::} formXhtmlElements
+                                |ERROR {:System.out.println ("Error lexico" );:}
+                                |{:System.out.println ("Error sintactico!!!");:}
+                                ;                        
+
+
+
+/*============================LOS ELEMENTOS DEL FORM============================*/               
+     
+
+
+endHtml::=  START_TAG CLOSE_DECLARATION HTML END_TAG {::}
+            |{:System.out.println ("Error sintactico en la sentencia del html");:}
+            |ERROR {:System.out.println ("Error lexico" );:}
+            ;
+
+texto ::= texto STRING 
+        | texto TEXT 
+        | texto NUMBER 
+        | texto2
+        ;
+
+texto2 ::=  STRING
+        | NUMBER
+        | TEXT
+        ;
+
+asigningOp ::= NAME EQUALS STRING {::} asigningOp
+              |VALUE EQUALS STRING {::} asigningOp
+              |INPUT_METHOD EQUALS STRING {::} asigningOp
+              |INPUT_ACTION EQUALS STRING {::} asigningOp
+              |ID EQUALS STRING {::} asigningOp
+              |WIDTH EQUALS STRING {::} asigningOp
+              |HEIGHT EQUALS STRING {::} asigningOp
+              |IFRAME_TARGET_LINK EQUALS STRING {::} asigningOp
+              |ALTERNATIVE_NAME EQUALS STRING {::} asigningOp
+              |STYLE EQUALS STRING {::} asigningOp
+              |LINK EQUALS STRING {::} asigningOp
+              |SOURCE EQUALS STRING {::} asigningOp
+              |TYPE EQUALS STRING {::} asigningOp
+              |ERROR {:System.out.println ("Error lexico: ");:}
+              |{:System.out.println ("Error sintactico!!!");:}
+              ;
+
